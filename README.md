@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Access Alberta Legal 
 
 ## Executive Summary
