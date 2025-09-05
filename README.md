@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Access Alberta Legal 
 
 ## Executive Summary
@@ -126,3 +127,7 @@ The comprehensive feature set, robust technical architecture, and phased impleme
 **Document Version**: 1.0  
 **Last Updated**: September 2025  
 **Prepared By**: Access Alberta Legal Development Team
+=======
+# Alberta_Access_Legal
+Access Alberta Legal is a comprehensive digital platform designed to bridge the gap between legal professionals and clients in Alberta. The platform serves as a centralized hub for legal services, resources, and communication, making legal assistance more accessible and efficient for all Albertans.
+>>>>>>> fb99bfb3cd37573ea8e9b37bbce755a7910d28b0
