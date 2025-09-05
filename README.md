@@ -79,10 +79,13 @@ Empower Albertans with easy access to legal expertise, educational resources, an
 - **State Management**: React Context and SWR for data fetching
 
 ### Backend Technologies
-- **Database**: 
-- **Authentication**: 
-- **File Storage**: 
-- **Real-time Communication**: 
+- **Database**: Convex (NoSQL with real-time sync, automatic caching, and reactive queries)
+- **Authentication**: Convex Auth with OAuth providers (Google) 
+- **File Storage**: Convex file storage 
+- **Real-time Communication**: Convex WebSocket 
+- **Vector Search**: Convex vector search with embed providers
+- **Scheduled Jobs**: Convex cron functions 
+- **External Integrations**: ClickUp API for project management sync
 
 ### AI Integration
 
@@ -123,7 +126,7 @@ The comprehensive feature set, robust technical architecture, and phased impleme
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: September 2025  
+**Document Version**: 1.01 
+**Last Updated**: September 5, 2025  
 **Prepared By**: Access Alberta Legal Development Team
 
