@@ -20,6 +20,6 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["./**/*"],
+  "include": ["./**/*", "../app/ConvexClientProvider.jsx"],
   "exclude": ["./_generated"]
 }

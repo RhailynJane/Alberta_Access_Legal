@@ -1,6 +1,9 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+// Auth Provider: This is the wrapper provide auth context.
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
