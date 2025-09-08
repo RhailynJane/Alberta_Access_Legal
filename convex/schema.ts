@@ -77,13 +77,34 @@ export default defineSchema({
       })
     ),
 
-    // === Onboarding ===
-    onboardingComplete: v.boolean(),
+    // === Onboarding fields (populated via profile callback) ===
     hasSpouse: v.optional(v.boolean()),
     hasChildren: v.optional(v.boolean()),
     employmentStatus: v.optional(v.string()),
     incomeRange: v.optional(v.string()),
-    urgencyLevel: v.optional(v.string()),
+    
+    // Step 3: Legal needs
+    legalAreas: v.optional(v.array(v.string())),
+    urgencyLevel: v.optional(v.union(
+      v.literal("urgent"),
+      v.literal("soon"), 
+      v.literal("flexible")
+    )),
+    legalMatterDescription: v.optional(v.string()),
+    
+    // Step 4: Preferences 
+    meetingPreferences: v.optional(v.array(v.union(
+      v.literal("online"),
+      v.literal("in-person"),
+      v.literal("video-call"),
+      v.literal("phone-call"),
+      v.literal("no-preference")
+    ))),
+    lawyerGenderPreference: v.optional(v.union(
+      v.literal("male"),
+      v.literal("female"),
+      v.literal("no-preference")
+    )),
 
     // === Preferences ===
     preferences: v.optional(
@@ -101,7 +122,6 @@ export default defineSchema({
         smsNotifications: v.optional(v.boolean()),
       })
     ),
-
   })
     .index("email", ["email"])
     .index("by_phone", ["phone"])
