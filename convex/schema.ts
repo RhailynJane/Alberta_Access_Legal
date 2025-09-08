@@ -5,26 +5,25 @@ import { authTables } from "@convex-dev/auth/server";
 export default defineSchema({
   ...authTables,
 
-  // Extend users with profiles - properly linked via ID
-  userProfiles: defineTable({
-    userId: v.id("users"), // Direct reference to auth users table
-    email: v.string(), // denormalized for unique constraint checking
+  // Extended users table - single source of truth
+  users: defineTable({
+    // === Convex Auth default fields ===
+    name: v.optional(v.string()),
+    image: v.optional(v.string()),
+    email: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
     phone: v.optional(v.string()),
+    phoneVerificationTime: v.optional(v.number()),
+    isAnonymous: v.optional(v.boolean()),
 
-    location: v.optional(
-      v.object({
-        city: v.optional(v.string()),
-        province: v.optional(v.string()),
-        postalCode: v.optional(v.string()),
-      })
-    ),
-
+    // === RBAC (required from start) ===
     userType: v.union(
       v.literal("lawyer"),
       v.literal("end-user"),
       v.literal("admin")
     ),
 
+    // === Profile fields ===
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
     gender: v.optional(
@@ -36,31 +35,100 @@ export default defineSchema({
       )
     ),
     dateOfBirth: v.optional(v.string()),
+    legalNeed: v.optional(v.string()),
 
-    // Onboarding
+    // === Location ===
+    location: v.optional(
+      v.object({
+        city: v.optional(v.string()),
+        province: v.optional(v.string()),
+        postalCode: v.optional(v.string()),
+      })
+    ),
+
+    // === PIPA/PIPEDA Compliance (optional with defaults in auth) ===
+    consent: v.optional(
+      v.object({
+        terms: v.boolean(),
+        privacy: v.boolean(),
+        version: v.string(),
+        timestamp: v.number(),
+        marketing: v.optional(v.boolean()),
+        dataProcessing: v.boolean(),
+      })
+    ),
+
+    lifecycle: v.optional(
+      v.object({
+        createdAt: v.number(),
+        updatedAt: v.number(),
+        lastActiveAt: v.number(),
+        deletionRequested: v.optional(v.number()),
+        exportRequested: v.optional(v.number()),
+      })
+    ),
+
+    privacyPrefs: v.optional(
+      v.object({
+        shareProfile: v.boolean(),
+        allowAnalytics: v.boolean(),
+        allowAI: v.boolean(),
+        publicProfile: v.boolean(),
+      })
+    ),
+
+    // === Onboarding ===
     onboardingComplete: v.boolean(),
     hasSpouse: v.optional(v.boolean()),
     hasChildren: v.optional(v.boolean()),
     employmentStatus: v.optional(v.string()),
     incomeRange: v.optional(v.string()),
-    legalNeed: v.optional(v.string()),
     urgencyLevel: v.optional(v.string()),
 
-    lawyerProfileId: v.optional(v.id("lawyerProfiles")),
-
+    // === Preferences ===
     preferences: v.optional(
       v.object({
         language: v.optional(v.string()),
-        communicationPreference: v.optional(v.string()),
+        communicationPreference: v.optional(
+          v.union(
+            v.literal("email"),
+            v.literal("sms"),
+            v.literal("phone"),
+            v.literal("in-app")
+          )
+        ),
         emailNotifications: v.optional(v.boolean()),
         smsNotifications: v.optional(v.boolean()),
       })
     ),
+
   })
-    .index("by_userId", ["userId"])
-    .index("by_email", ["email"]) // For uniqueness checking
+    .index("email", ["email"])
     .index("by_phone", ["phone"])
-    .index("by_userType", ["userType"]),
+    .index("by_userType", ["userType"])
+    .index("by_deletion", ["lifecycle.deletionRequested"]),
+
+  // Consent audit log for compliance tracking
+  consentAuditLog: defineTable({
+    userId: v.id("users"),
+    event: v.union(
+      v.literal("terms_accepted"),
+      v.literal("privacy_accepted"),
+      v.literal("consent_withdrawn"),
+      v.literal("consent_updated"),
+      v.literal("marketing_opted_in"),
+      v.literal("marketing_opted_out"),
+      v.literal("data_export_requested"),
+      v.literal("deletion_requested")
+    ),
+    version: v.string(),
+    timestamp: v.number(),
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    metadata: v.optional(v.any()), // Flexible for different event types
+  })
+    .index("by_user", ["userId", "timestamp"])
+    .index("by_event", ["event", "timestamp"]),
 
   // OAuth tokens with proper user reference
   oauthTokens: defineTable({
@@ -74,66 +142,31 @@ export default defineSchema({
 
   lawyerProfiles: defineTable({
     userId: v.id("users"),
-    barNumber: v.string(),
-    yearsOfExperience: v.number(),
+    barNumber: v.optional(v.string()),
+    yearsOfExperience: v.optional(v.number()),
     firm: v.optional(v.string()),
-    bio: v.string(),
+    bio: v.optional(v.string()),
     hourlyRate: v.optional(v.number()),
 
-    practiceAreas: v.array(v.string()),
-    courts: v.array(v.string()),
+    practiceAreas: v.optional(v.array(v.string())),
+    courts: v.optional(v.array(v.string())),
 
-    matchingCriteria: v.object({
-      acceptsLegalAid: v.boolean(),
-      languages: v.array(v.string()),
-      servicesOffered: v.array(v.string()),
-      clientTypes: v.array(v.string()),
-    }),
+    matchingCriteria: v.optional(
+      v.object({
+        acceptsLegalAid: v.optional(v.boolean()),
+        languages: v.optional(v.array(v.string())),
+        servicesOffered: v.optional(v.array(v.string())),
+        clientTypes: v.optional(v.array(v.string())),
+      })
+    ),
 
-    verified: v.boolean(),
-    active: v.boolean(),
+    verified: v.optional(v.boolean()),
+    active: v.optional(v.boolean()),
   })
     .index("by_userId", ["userId"])
     .index("by_barNumber", ["barNumber"]) // For uniqueness
     .index("by_practiceAreas", ["practiceAreas"])
     .index("by_active", ["active"]),
-
-  lawyerAvailability: defineTable({
-    lawyerId: v.id("users"),
-    dayOfWeek: v.number(), // 0-6
-    startTime: v.string(), // "09:00"
-    endTime: v.string(), // "17:00"
-    isRecurring: v.boolean(),
-    specificDate: v.optional(v.number()), // for one-off availability
-  })
-    .index("by_lawyer", ["lawyerId"])
-    .index("by_date", ["specificDate"]),
-
-  appointments: defineTable({
-    lawyerId: v.id("users"),
-    clientId: v.id("users"),
-    scheduledAt: v.number(),
-    endTime: v.number(), // Added for overlap checking
-    duration: v.number(),
-    status: v.union(
-      v.literal("pending"),
-      v.literal("confirmed"),
-      v.literal("cancelled"),
-      v.literal("completed")
-    ),
-    type: v.union(
-      v.literal("consultation"),
-      v.literal("follow-up"),
-      v.literal("court-prep")
-    ),
-    notes: v.optional(v.string()),
-    googleEventId: v.optional(v.string()),
-    meetingLink: v.optional(v.string()),
-  })
-    .index("by_lawyer", ["lawyerId", "scheduledAt"])
-    .index("by_client", ["clientId"])
-    .index("by_lawyer_time", ["lawyerId", "scheduledAt", "endTime"]) // For overlap checking
-    .index("by_status", ["status"]),
 
   conversations: defineTable({
     participant1Id: v.id("users"),
