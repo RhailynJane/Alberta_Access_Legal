@@ -11,7 +11,6 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       const user = await ctx.db.get(userId);
       if (!user?.lifecycle) {
         await ctx.db.patch(userId, {
-          onboardingComplete: false,
           lifecycle: {
             createdAt: Date.now(),
             updatedAt: Date.now(),
