@@ -372,3 +372,5 @@ if (user?.image && imageUrl === undefined) {
 2. **File Validation**: Always validate on frontend AND backend
 3. **Storage IDs**: Never expose storage IDs publicly - they're internal references
 4. **URLs**: Public URLs from `getProfileImageUrl` are safe to use anywhere
+
+
