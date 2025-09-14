@@ -1,0 +1,217 @@
+@startuml Profile Image Upload - Architecture Components
+<style>
+' Professional Light Theme Configuration - Pure CSS Style
+!$color_bg = "#ffffff"
+!$color_bg_light = "#f8f9fa"
+!$color_bg_lighter = "#e9ecef"
+!$color_fg = "#212529"
+!$color_fg_muted = "#6c757d"
+!$color_primary = "#0066cc"
+!$color_primary_light = "#4da6ff"
+!$color_success = "#28a745"
+!$color_warning = "#856404"
+!$color_error = "#dc3545"
+!$color_accent = "#6f42c1"
+
+' Root document styling
+document {
+  BackGroundColor: $color_bg;
+  FontColor: $color_fg;
+  FontName: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+  FontSize: 11;
+}
+
+' Component styling
+component {
+  BackGroundColor: $color_bg_light;
+  LineColor: $color_primary;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+  RoundCorner: 8;
+  Padding: 8;
+}
+
+' Package styling
+package {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 11;
+  LineThickness: 2;
+  RoundCorner: 8;
+}
+
+' Database styling
+database {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_success;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+}
+
+' Arrow styling
+arrow {
+  LineColor: $color_success;
+  FontColor: $color_warning;
+  FontSize: 9;
+  LineThickness: 2;
+}
+
+' Note styling
+note {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 9;
+  LineThickness: 1;
+  RoundCorner: 6;
+  Padding: 6;
+}
+</style>
+
+title Profile Image Upload - System Architecture & Component Relationships
+
+package "Frontend Layer" as Frontend {
+  [ProfileImageUpload\nComponent] as ProfileComp
+  [File Validation\nLogic] as FileValidation
+  [Upload Progress\nUI] as ProgressUI
+  [Error Handling\nSystem] as ErrorHandler
+}
+
+package "Convex API Layer" as APILayer {
+  [generateProfileImageUploadUrl\nMutation] as GenerateURL
+  [updateProfileImage\nMutation] as UpdateProfile
+  [getProfileImageUrl\nQuery] as GetImageURL
+  [removeProfileImage\nMutation] as RemoveImage
+}
+
+package "Business Logic Layer" as ModelLayer {
+  [updateUserProfileImage\nFunction] as UpdateFunction
+  [getUserProfileImageUrl\nFunction] as GetURLFunction
+  [removeUserProfileImage\nFunction] as RemoveFunction
+}
+
+package "Infrastructure Layer" as Infrastructure {
+  database "Convex Storage\nSystem" as Storage {
+    [File Storage] as FileStore
+    [URL Generation] as URLGen
+    [CDN Distribution] as CDN
+  }
+  
+  database "Convex Database" as Database {
+    [Users Table] as UsersTable
+    [Authentication\nSystem] as Auth
+  }
+}
+
+package "Security & Validation" as Security {
+  [Authentication\nMiddleware] as AuthMiddleware
+  [File Type\nValidation] as FileTypeValidation
+  [Size Limit\nEnforcement] as SizeValidation
+  [User Permission\nChecks] as PermissionCheck
+}
+
+' Frontend Component Relationships
+ProfileComp --> FileValidation : validates files
+ProfileComp --> ProgressUI : shows progress
+ProfileComp --> ErrorHandler : handles errors
+FileValidation --> ProfileComp : validation results
+
+' API Calls from Frontend
+ProfileComp --> GenerateURL : Step 1: Get upload URL
+ProfileComp --> UpdateProfile : Step 3: Save storage ID
+ProfileComp --> GetImageURL : Step 4: Display image
+ProfileComp --> RemoveImage : Delete image
+
+' API to Model Layer
+GenerateURL --> Storage : generate upload URL
+UpdateProfile --> UpdateFunction : business logic
+GetImageURL --> GetURLFunction : URL generation
+RemoveImage --> RemoveFunction : removal logic
+
+' Model Layer to Infrastructure
+UpdateFunction --> UsersTable : update user.image
+UpdateFunction --> Auth : check user ID
+GetURLFunction --> URLGen : get public URL
+RemoveFunction --> UsersTable : clear image field
+
+' Security Integration
+GenerateURL --> AuthMiddleware : verify user
+UpdateProfile --> AuthMiddleware : verify user
+RemoveImage --> AuthMiddleware : verify user
+UpdateProfile --> PermissionCheck : user owns profile
+
+FileValidation --> FileTypeValidation : check file type
+FileValidation --> SizeValidation : check file size
+
+' Storage System Internal
+FileStore --> URLGen : generate URLs
+URLGen --> CDN : distribute content
+
+note top of Frontend
+  **Frontend Responsibilities:**
+  • File selection UI
+  • Client-side validation
+  • Upload progress tracking
+  • Error message display
+  • Image display logic
+end note
+
+note right of APILayer
+  **API Layer Design:**
+  • Minimal surface area
+  • Authentication required
+  • Type-safe parameters
+  • Clear error handling
+  • Frontend-callable only
+end note
+
+note bottom of ModelLayer
+  **Business Logic Layer:**
+  • Internal functions only
+  • Direct database access
+  • Complex business rules
+  • Reusable across APIs
+  • Testing isolation
+end note
+
+note left of Infrastructure
+  **Infrastructure Features:**
+  • Direct storage upload
+  • Automatic optimization
+  • CDN distribution
+  • Atomic database ops
+  • Built-in authentication
+end note
+
+note right of Security
+  **Security Measures:**
+  • User authentication
+  • File type restrictions
+  • Size limit enforcement
+  • Permission validation
+  • Storage ID privacy
+end note
+
+' Data Flow Annotations
+note as DataFlow
+  **Data Flow Summary:**
+  
+  **Upload Path:**
+  1. 📁 User selects file
+  2. ✅ Frontend validates
+  3. 🔗 Get upload URL
+  4. 🚀 Upload to storage
+  5. 💾 Update user profile
+  6. 🖼️ Display image
+  
+  **Security Checkpoints:**
+  • 🔐 Auth on all mutations
+  • 📝 File validation
+  • 👤 User ownership
+  • 🛡️ Type safety
+end note
+
+@enduml

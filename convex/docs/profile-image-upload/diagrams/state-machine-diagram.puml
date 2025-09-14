@@ -1,0 +1,325 @@
+@startuml Profile Image Upload - UI State Machine
+<style>
+' Professional Light Theme Configuration - Pure CSS Style
+!$color_bg = "#ffffff"
+!$color_bg_light = "#f8f9fa"
+!$color_bg_lighter = "#e9ecef"
+!$color_fg = "#212529"
+!$color_fg_muted = "#6c757d"
+!$color_primary = "#0066cc"
+!$color_primary_light = "#4da6ff"
+!$color_success = "#28a745"
+!$color_warning = "#856404"
+!$color_error = "#dc3545"
+!$color_accent = "#6f42c1"
+
+' Root document styling
+document {
+  BackGroundColor: $color_bg;
+  FontColor: $color_fg;
+  FontName: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+  FontSize: 11;
+}
+
+' State styling
+state {
+  BackGroundColor: $color_bg_light;
+  LineColor: $color_primary;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+  RoundCorner: 8;
+  Padding: 8;
+}
+
+' Composite state styling
+compositeState {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+  RoundCorner: 8;
+}
+
+' Arrow styling
+arrow {
+  LineColor: $color_success;
+  FontColor: $color_warning;
+  FontSize: 9;
+  LineThickness: 2;
+}
+
+' Note styling
+note {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 9;
+  LineThickness: 1;
+  RoundCorner: 6;
+  Padding: 6;
+}
+</style>
+
+title Profile Image Upload Component - UI State Machine
+
+[*] --> Initializing : Component mounts
+
+state Initializing {
+  [*] --> LoadingUserData
+  LoadingUserData : 🔄 Fetching user profile
+  LoadingUserData --> InitComplete : User data loaded
+  InitComplete --> [*]
+}
+
+Initializing --> Ready : Initialization complete
+
+state Ready #LightBlue {
+  Ready : 💤 Idle state
+  Ready : Shows current image or placeholder
+  Ready : Upload button enabled
+  
+  note right of Ready
+    **UI Elements Visible:**
+    • Current profile image OR placeholder
+    • "Choose Image" button
+    • Optional "Remove Image" button
+    • No error/success messages
+    
+    **User Can:**
+    • Click to select new image
+    • Click to remove current image
+    • Continue using app normally
+  end note
+}
+
+Ready --> FileSelection : User clicks "Choose Image"
+Ready --> RemovingImage : User clicks "Remove Image"
+
+state FileSelection {
+  FileSelection : 📂 File picker dialog open
+}
+
+FileSelection --> Ready : User cancels selection
+FileSelection --> Validating : User selects file
+
+state Validating {
+  Validating : 🔍 Validating selected file
+  
+  note right of Validating
+    **Validation Checks:**
+    • File exists and readable
+    • File size ≤ 5MB
+    • File type in [JPG, PNG, WebP]
+    • File is valid image format
+    
+    **Duration:** ~50-100ms
+  end note
+}
+
+Validating --> ValidationError : Validation fails
+Validating --> Uploading : Validation passes
+
+state ValidationError #Pink {
+  ValidationError : ❌ File validation failed
+  ValidationError : Shows specific error message
+  ValidationError : Upload button disabled
+  
+  note right of ValidationError
+    **Error Messages:**
+    • "File size must be less than 5MB"
+    • "Only JPEG, PNG, WebP allowed"
+    • "Please select a valid image"
+    
+    **UI State:**
+    • Error message prominently displayed
+    • Previous image still shown
+    • Can select new file
+  end note
+}
+
+ValidationError --> Ready : User dismisses error
+ValidationError --> FileSelection : User selects new file
+
+state Uploading #LightYellow {
+  [*] --> RequestingURL
+  
+  RequestingURL : 🔗 Getting upload URL
+  RequestingURL --> UploadingFile : URL received
+  RequestingURL --> UploadError : URL request failed
+  
+  UploadingFile : 🚀 Uploading to storage
+  UploadingFile : Progress: 0-100%
+  UploadingFile --> UpdatingProfile : Upload complete
+  UploadingFile --> UploadError : Upload failed
+  
+  UpdatingProfile : 💾 Saving to user profile
+  UpdatingProfile --> UploadSuccess : Profile updated
+  UpdatingProfile --> UploadError : Profile update failed
+  
+  note right of Uploading
+    **UI During Upload:**
+    • Progress spinner/bar
+    • "Uploading..." message
+    • All buttons disabled
+    • Cancel option (optional)
+    
+    **Progress Feedback:**
+    • Stage 1: "Preparing upload..."
+    • Stage 2: "Uploading... 45%"
+    • Stage 3: "Finalizing..."
+  end note
+}
+
+Uploading --> UploadError : Any step fails
+Uploading --> UploadSuccess : All steps complete
+
+state UploadError #Pink {
+  UploadError : ❌ Upload process failed
+  UploadError : Shows error with retry option
+  
+  note right of UploadError
+    **Error Scenarios:**
+    • Network connection failed
+    • Authentication expired
+    • Storage quota exceeded
+    • Server temporarily unavailable
+    
+    **UI Elements:**
+    • Clear error description
+    • "Try Again" button
+    • "Cancel" button
+    • Previous image still shown
+  end note
+}
+
+UploadError --> Ready : User cancels
+UploadError --> Uploading : User retries upload
+
+state UploadSuccess #LightGreen {
+  UploadSuccess : ✅ Upload completed successfully
+  UploadSuccess : Shows success message briefly
+  UploadSuccess : New image displayed
+  
+  note right of UploadSuccess
+    **Success Feedback:**
+    • Brief success message/toast
+    • New image immediately visible
+    • Smooth transition animation
+    • Remove button now available
+    
+    **Duration:** 2-3 seconds
+  end note
+}
+
+UploadSuccess --> Ready : Success message fades
+
+state RemovingImage #LightYellow {
+  RemovingImage : 🗑️ Removing profile image
+  RemovingImage : Confirming with server
+  
+  note right of RemovingImage
+    **Removal Process:**
+    • Optional confirmation dialog
+    • API call to clear image
+    • Immediate UI feedback
+    • Fallback to placeholder
+    
+    **Duration:** ~500ms
+  end note
+}
+
+RemovingImage --> RemovalError : Removal fails
+RemovingImage --> RemovalSuccess : Removal succeeds
+
+state RemovalError #Pink {
+  RemovalError : ❌ Failed to remove image
+  RemovalError : Shows error message
+  
+  note right of RemovalError
+    **Error Handling:**
+    • Keep current image visible
+    • Show "Try again" option
+    • Log error for debugging
+  end note
+}
+
+RemovalError --> Ready : Error resolved
+
+state RemovalSuccess #LightGreen {
+  RemovalSuccess : ✅ Image removed successfully
+  RemovalSuccess : Shows placeholder image
+  
+  note right of RemovalSuccess
+    **UI Changes:**
+    • Image replaced with placeholder
+    • Remove button hidden
+    • Brief success message
+  end note
+}
+
+RemovalSuccess --> Ready : Success complete
+
+' Authentication state handling
+Ready --> AuthenticationRequired : User not authenticated
+Uploading --> AuthenticationRequired : Auth expires during upload
+
+state AuthenticationRequired #Orange {
+  AuthenticationRequired : 🔒 Authentication required
+  AuthenticationRequired : Shows login prompt/redirect
+  
+  note right of AuthenticationRequired
+    **Authentication Handling:**
+    • Preserve current UI state
+    • Show login dialog OR redirect
+    • Resume operation after login
+    • Clear sensitive data if needed
+  end note
+}
+
+AuthenticationRequired --> Ready : User logs in
+AuthenticationRequired --> [*] : User navigates away
+
+' Global error recovery
+state ErrorRecovery {
+  [*] --> DetectError
+  DetectError : 🔍 Unexpected error detected
+  DetectError --> ShowFallback : Error confirmed
+  ShowFallback : 🛡️ Show fallback UI
+  ShowFallback --> [*] : Recovery complete
+}
+
+ErrorRecovery --> Ready : Component recovers
+
+note bottom
+  **State Management Implementation Notes:**
+  
+  **State Variables (React useState):**
+  ```javascript
+  const [uploadState, setUploadState] = useState('ready');
+  const [error, setError] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentImage, setCurrentImage] = useState(user?.image);
+  ```
+  
+  **Key State Transitions:**
+  • 🔄 **Loading States**: Always show feedback for operations > 200ms
+  • ❌ **Error States**: Always provide recovery path + clear messaging
+  • ✅ **Success States**: Brief confirmation before returning to ready
+  • 🔒 **Auth States**: Preserve state across authentication flows
+  
+  **Performance Optimizations:**
+  • Debounced validation for multiple file selections
+  • Optimistic UI updates where safe
+  • Background retries for transient failures
+  • Memory cleanup on component unmount
+  
+  **Accessibility Considerations:**
+  • Screen reader announcements for state changes
+  • Keyboard navigation for all interactive elements
+  • Focus management during state transitions
+  • High contrast support for error/success states
+end note
+
+@enduml

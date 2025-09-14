@@ -1,0 +1,292 @@
+@startuml Profile Image Upload - Error Handling Flow
+<style>
+' Professional Light Theme Configuration - Pure CSS Style
+!$color_bg = "#ffffff"
+!$color_bg_light = "#f8f9fa"
+!$color_bg_lighter = "#e9ecef"
+!$color_fg = "#212529"
+!$color_fg_muted = "#6c757d"
+!$color_primary = "#0066cc"
+!$color_primary_light = "#4da6ff"
+!$color_success = "#28a745"
+!$color_warning = "#856404"
+!$color_error = "#dc3545"
+!$color_accent = "#6f42c1"
+
+' Root document styling
+document {
+  BackGroundColor: $color_bg;
+  FontColor: $color_fg;
+  FontName: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+  FontSize: 11;
+}
+
+' State styling
+state {
+  BackGroundColor: $color_bg_light;
+  LineColor: $color_primary;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+  RoundCorner: 8;
+  Padding: 8;
+}
+
+' Error states get special coloring
+state {
+  BackGroundColor: #ffebee;
+  LineColor: $color_error;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+  RoundCorner: 8;
+  Padding: 8;
+}
+
+' Success states
+state {
+  BackGroundColor: #e8f5e8;
+  LineColor: $color_success;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+  RoundCorner: 8;
+}
+
+' Arrow styling
+arrow {
+  LineColor: $color_success;
+  FontColor: $color_warning;
+  FontSize: 9;
+  LineThickness: 2;
+}
+
+' Note styling
+note {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 9;
+  LineThickness: 1;
+  RoundCorner: 6;
+  Padding: 6;
+}
+</style>
+
+title Profile Image Upload - Comprehensive Error Handling Strategy
+
+[*] --> UserSelectsFile : User interaction
+
+state UserSelectsFile {
+  UserSelectsFile : 📁 User picks image file
+}
+
+UserSelectsFile --> FileValidation : File selected
+
+state FileValidation {
+  [*] --> CheckFileExists
+  CheckFileExists : File object exists?
+  CheckFileExists --> CheckFileSize : File exists
+  CheckFileExists --> NoFileError : No file
+  
+  CheckFileSize : Size < 5MB?
+  CheckFileSize --> CheckFileType : Valid size
+  CheckFileSize --> FileSizeError : Too large
+  
+  CheckFileType : JPEG/PNG/WebP?
+  CheckFileType --> ValidationSuccess : Valid type
+  CheckFileType --> FileTypeError : Invalid type
+  
+  state NoFileError #Pink {
+    NoFileError : ❌ "Please select a file"
+  }
+  
+  state FileSizeError #Pink {
+    FileSizeError : ❌ "File size must be less than 5MB"
+    note right : Max file size is configurable\nbut 5MB is recommended for UX
+  }
+  
+  state FileTypeError #Pink {
+    FileTypeError : ❌ "Only JPEG, PNG, and WebP allowed"
+    note right : Prevents malicious file uploads\nand ensures compatibility
+  }
+  
+  ValidationSuccess --> [*]
+  NoFileError --> [*]
+  FileSizeError --> [*] 
+  FileTypeError --> [*]
+}
+
+FileValidation --> RetryFileSelection : Validation failed
+FileValidation --> GetUploadURL : Validation passed
+
+RetryFileSelection --> UserSelectsFile : User tries again
+
+state GetUploadURL {
+  GetUploadURL : 🔗 Request upload URL
+}
+
+GetUploadURL --> AuthCheck : API call made
+
+state AuthCheck {
+  [*] --> ValidateToken
+  ValidateToken : User authenticated?
+  ValidateToken --> AuthSuccess : Valid session
+  ValidateToken --> AuthError : No/expired token
+  
+  state AuthError #Pink {
+    AuthError : ❌ "Not authenticated"
+    note right : User session expired\nor never logged in
+  }
+  
+  AuthSuccess --> [*]
+  AuthError --> [*]
+}
+
+AuthCheck --> RedirectLogin : Authentication failed
+AuthCheck --> UploadFile : Authentication passed
+
+RedirectLogin --> LoginPage : Navigate to login
+
+state LoginPage {
+  LoginPage : 🔒 User completes login
+}
+
+LoginPage --> GetUploadURL : Return after login
+
+state UploadFile {
+  UploadFile : 🚀 Upload to Convex Storage
+}
+
+UploadFile --> UploadValidation : File sent to storage
+
+state UploadValidation {
+  [*] --> NetworkCheck
+  NetworkCheck : Network available?
+  NetworkCheck --> StorageCheck : Connection OK
+  NetworkCheck --> NetworkError : Connection failed
+  
+  StorageCheck : Storage quota OK?
+  StorageCheck --> UploadSuccess : Space available
+  StorageCheck --> StorageError : Quota exceeded
+  
+  state NetworkError #Pink {
+    NetworkError : ❌ "Upload failed - check connection"
+    note right : Network timeout\nor connectivity issues
+  }
+  
+  state StorageError #Pink {
+    StorageError : ❌ "Storage limit reached"
+    note right : Convex storage quota\nexceeded (rare in practice)
+  }
+  
+  UploadSuccess --> [*]
+  NetworkError --> [*]
+  StorageError --> [*]
+}
+
+UploadValidation --> RetryUpload : Upload failed
+UploadValidation --> UpdateProfile : Upload successful
+
+RetryUpload --> UploadFile : User retries
+
+state UpdateProfile {
+  UpdateProfile : 💾 Update user profile
+}
+
+UpdateProfile --> ProfileUpdate : Save storage ID
+
+state ProfileUpdate {
+  [*] --> DatabaseCheck
+  DatabaseCheck : Database available?
+  DatabaseCheck --> UpdateUser : DB operational
+  DatabaseCheck --> DatabaseError : DB unavailable
+  
+  UpdateUser : User record exists?
+  UpdateUser --> ProfileSuccess : Update successful
+  UpdateUser --> UserNotFoundError : User missing
+  
+  state DatabaseError #Pink {
+    DatabaseError : ❌ "Update failed - please try again"
+    note right : Temporary database issues\nUser should retry
+  }
+  
+  state UserNotFoundError #Pink {
+    UserNotFoundError : ❌ "User account not found"
+    note right : Rare edge case - user deleted\nduring upload process
+  }
+  
+  ProfileSuccess --> [*]
+  DatabaseError --> [*]
+  UserNotFoundError --> [*]
+}
+
+ProfileUpdate --> RetryUpdate : Update failed
+ProfileUpdate --> DisplayImage : Update successful
+
+RetryUpdate --> UpdateProfile : Auto-retry or user action
+
+state DisplayImage {
+  DisplayImage : 🖼️ Display new profile image
+}
+
+DisplayImage --> ImageDisplay : Get display URL
+
+state ImageDisplay {
+  [*] --> URLGeneration
+  URLGeneration : Generate public URL
+  URLGeneration --> DisplaySuccess : URL created
+  URLGeneration --> URLError : URL generation failed
+  
+  state URLError #Pink {
+    URLError : ❌ "Image temporarily unavailable"
+    note right : Storage ID saved but\nURL generation failed\n(very rare)
+  }
+  
+  DisplaySuccess --> [*]
+  URLError --> [*]
+}
+
+ImageDisplay --> FinalSuccess : Display successful
+ImageDisplay --> ShowPlaceholder : Display failed
+
+state FinalSuccess #LightGreen {
+  FinalSuccess : ✅ Profile image updated successfully!
+}
+
+state ShowPlaceholder {
+  ShowPlaceholder : 🔄 Show placeholder with retry option
+}
+
+ShowPlaceholder --> ImageDisplay : User retries display
+
+FinalSuccess --> [*]
+
+' Global error recovery note
+note bottom
+  **Error Recovery Strategies:**
+  
+  **Client-Side Errors (Immediate feedback):**
+  • 📁 **File Validation**: Show error immediately, allow new selection
+  • 🔐 **Authentication**: Redirect to login, preserve state on return
+  • 📶 **Network Issues**: Show retry button, possibly auto-retry
+  
+  **Server-Side Errors (Graceful degradation):**
+  • 💾 **Database Errors**: Auto-retry with exponential backoff
+  • 🏪 **Storage Errors**: Show clear message, suggest smaller file
+  • 🔗 **URL Generation**: Show placeholder, retry in background
+  
+  **User Experience Principles:**
+  • ⚡ **Fast Feedback**: Validate on client before server calls
+  • 🔄 **Easy Recovery**: Always provide retry mechanisms
+  • 📱 **Progressive Enhancement**: Core functionality works even with errors
+  • 🛡️ **Security First**: Authentication errors redirect properly
+  
+  **Implementation Notes:**
+  • All error states preserve user's current state
+  • Retry mechanisms prevent infinite loops with exponential backoff
+  • Error messages are user-friendly, not technical
+  • Success path is optimized for happy case performance
+end note
+
+@enduml

@@ -1,0 +1,265 @@
+@startuml Profile Image Upload - Complete Flow
+<style>
+' Professional Light Theme Configuration - Pure CSS Style
+!$color_bg = "#ffffff"
+!$color_bg_light = "#f8f9fa"
+!$color_bg_lighter = "#e9ecef"
+!$color_fg = "#212529"
+!$color_fg_muted = "#6c757d"
+!$color_primary = "#0066cc"
+!$color_primary_light = "#4da6ff"
+!$color_success = "#28a745"
+!$color_warning = "#856404"
+!$color_error = "#dc3545"
+!$color_accent = "#6f42c1"
+
+' Root document styling
+document {
+  BackGroundColor: $color_bg;
+  FontColor: $color_fg;
+  FontName: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+  FontSize: 11;
+}
+
+' Sequence diagram specific styling
+participant {
+  BackGroundColor: $color_bg_light;
+  LineColor: $color_primary;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+  RoundCorner: 8;
+  Padding: 8;
+}
+
+actor {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+}
+
+' Arrow styling
+arrow {
+  LineColor: $color_success;
+  FontColor: $color_warning;
+  FontSize: 12;
+  LineThickness: 2;
+}
+
+' Activation box styling
+lifeLine {
+  LineColor: $color_primary;
+  LineThickness: 2;
+}
+
+' Note styling
+note {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 9;
+  LineThickness: 1;
+  RoundCorner: 6;
+  Padding: 6;
+}
+
+' Group/Alt styling
+group {
+  BackGroundColor: $color_bg_light;
+  LineColor: $color_primary;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+}
+</style>
+
+title Profile Image Upload - Complete User Flow
+
+actor "👤 User" as User
+participant "💻 Frontend\n(React)" as Frontend
+participant "🔧 Convex API\n(users.ts)" as API
+participant "🏗️ Model Layer\n(model/users.ts)" as Model
+participant "💾 Convex Storage" as Storage
+participant "🗄️ Database" as DB
+
+note over User, DB
+  **Profile Image Upload Architecture**
+  
+  Following Convex best practices with:
+  • **API Layer**: Minimal frontend-exposed endpoints
+  • **Model Layer**: Business logic and validation
+  • **Direct Storage**: Optimized file upload flow
+  • **Authentication**: Secure, user-scoped operations
+end note
+
+== Phase 1: User Initiates Upload ==
+
+User -> Frontend : 📁 Select image file
+activate Frontend
+
+note right of Frontend
+  **Client-Side Validation**
+  • File size (max 5MB)
+  • File type (JPG, PNG, WebP)
+  • Image dimensions check
+  • User feedback during validation
+end note
+
+Frontend -> Frontend : 🔍 Validate file\n(size, type, format)
+
+alt File validation passes
+  Frontend -> Frontend : ✅ Show "Uploading..." state
+else File validation fails
+  Frontend -> User : ❌ Show error message
+  note right of Frontend
+    **Common Validation Errors:**
+    • "File size must be less than 5MB"
+    • "Only JPEG, PNG, and WebP allowed"
+    • "Please select a valid image file"
+  end note
+  User <-- Frontend : Error displayed
+  deactivate Frontend
+end
+
+== Phase 2: Request Upload URL ==
+
+Frontend -> API : 🔗 generateProfileImageUploadUrl()
+activate API
+
+note right of API
+  **API Endpoint Security**
+  • Requires user authentication
+  • No parameters needed
+  • Returns temporary upload URL
+  • URL expires in ~1 hour
+end note
+
+API -> API : 🔐 Check user authentication
+alt User authenticated
+  API -> Storage : 📤 storage.generateUploadUrl()
+  activate Storage
+  Storage --> API : 🔗 Return temporary upload URL
+  deactivate Storage
+  API --> Frontend : ✅ Upload URL returned
+  deactivate API
+else User not authenticated
+  API --> Frontend : ❌ "Not authenticated" error
+  deactivate API
+  Frontend -> User : 🔒 Redirect to login
+  deactivate Frontend
+end
+
+== Phase 3: Direct File Upload ==
+
+Frontend -> Storage : 🚀 POST file to upload URL
+activate Storage
+
+note right of Storage
+  **Direct Storage Upload**
+  • Bypasses backend for efficiency
+  • Automatic compression/optimization
+  • Progress tracking available
+  • Returns storage ID on success
+end note
+
+Storage -> Storage : 💾 Store file with metadata
+alt Upload successful
+  Storage --> Frontend : ✅ { storageId: "st_abc123" }
+  deactivate Storage
+else Upload failed
+  Storage --> Frontend : ❌ Upload error
+  deactivate Storage
+  Frontend -> User : ⚠️ "Upload failed, please retry"
+  deactivate Frontend
+end
+
+== Phase 4: Update User Profile ==
+
+Frontend -> API : 🆔 updateProfileImage({ imageStorageId })
+activate API
+
+note right of API
+  **Profile Update Security**
+  • Validates user ownership
+  • Updates lifecycle timestamps
+  • Atomic database operation
+  • Returns updated user object
+end note
+
+API -> API : 🔐 Check authentication
+API -> Model : 📝 updateUserProfileImage(ctx, userId, storageId)
+activate Model
+
+Model -> DB : 🔍 ctx.db.get(userId)
+activate DB
+DB --> Model : 👤 Current user data
+Model -> Model : ✅ Validate user exists
+Model -> DB : 📝 ctx.db.patch(userId, { image: storageId })
+Model -> DB : 🕐 Update lifecycle.updatedAt
+DB --> Model : ✅ Update confirmed
+deactivate DB
+
+Model -> DB : 🔄 ctx.db.get(userId)
+activate DB
+DB --> Model : 👤 Updated user object
+deactivate DB
+
+Model --> API : ✅ Updated user returned
+deactivate Model
+API --> Frontend : 👤 Updated user data
+deactivate API
+
+== Phase 5: Display New Image ==
+
+Frontend -> API : 🖼️ getProfileImageUrl({ imageStorageId })
+activate API
+
+note right of API
+  **Image Display Optimization**
+  • Public URL generation
+  • Automatic caching
+  • CDN distribution
+  • Responsive image serving
+end note
+
+API -> Model : 🔗 getUserProfileImageUrl(ctx, storageId)
+activate Model
+Model -> Storage : 📎 ctx.storage.getUrl(storageId)
+activate Storage
+Storage --> Model : 🌐 Public image URL
+deactivate Storage
+Model --> API : 🔗 Public URL returned
+deactivate Model
+API --> Frontend : 🌐 Image URL
+deactivate API
+
+Frontend -> Frontend : 🖼️ Update UI with new image
+Frontend -> User : ✨ Display success state
+deactivate Frontend
+
+note over User, DB
+  **✅ Upload Complete Successfully!**
+  
+  **What Happened:**
+  1. ✅ File validated on client
+  2. ✅ Temporary upload URL generated
+  3. ✅ File uploaded directly to storage
+  4. ✅ User profile updated with storage ID
+  5. ✅ Public URL generated for display
+  
+  **Security Measures Applied:**
+  • 🔐 Authentication required for all mutations
+  • 🏷️ Storage IDs are private references
+  • 🌐 Public URLs are safe for display
+  • 👤 User can only update their own profile
+  
+  **Performance Optimizations:**
+  • ⚡ Direct storage upload (no backend proxy)
+  • 💾 Automatic image optimization
+  • 🚀 CDN distribution for fast loading
+  • 🔄 Minimal API calls required
+end note
+
+@enduml
