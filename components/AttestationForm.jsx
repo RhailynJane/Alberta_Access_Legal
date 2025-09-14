@@ -7,8 +7,9 @@ import { api } from "../convex/_generated/api";
 
 export function AttestationForm() {
   const submitAttestation = useMutation(api.attestations.submitAttestation);
-  const currentAttestation = useQuery(api.attestations.getMyAttestation);
-  const attestationStatus = useQuery(api.attestations.checkMyAttestationStatus);
+  // Disable queries for UI testing without auth
+  const currentAttestation = null; // useQuery(api.attestations.getMyAttestation);
+  const attestationStatus = null; // useQuery(api.attestations.checkMyAttestationStatus);
 
   const [formData, setFormData] = useState({
     legalName: "",
@@ -58,9 +59,14 @@ export function AttestationForm() {
     setSubmitSuccess(false);
 
     try {
-      const result = await submitAttestation(formData);
+      // For UI testing - simulate successful submission without backend call
+      console.log("Form data (UI test mode):", formData);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
       setSubmitSuccess(true);
-      console.log("Attestation submitted:", result);
+      
+      // Uncomment for actual backend submission:
+      // const result = await submitAttestation(formData);
+      // console.log("Attestation submitted:", result);
     } catch (error) {
       console.error("Attestation submission failed:", error);
       setSubmitError(error.message || "Submission failed. Please try again.");
@@ -84,24 +90,8 @@ export function AttestationForm() {
 
   return (
     <>
-      <Unauthenticated>
-        <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Lawyer Attestation
-          </h2>
-          <p className="text-gray-600 mb-4">
-            Please sign in to continue with your professional attestation.
-          </p>
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-            <p className="text-blue-800 text-sm">
-              This attestation is required for lawyers to verify their professional standing 
-              and credentials on the Access Alberta Legal platform.
-            </p>
-          </div>
-        </div>
-      </Unauthenticated>
-
-      <Authenticated>
+      {/* UI Testing Mode - Remove authentication wrapper */}
+      <div>
         <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -267,7 +257,7 @@ export function AttestationForm() {
             </form>
           )}
         </div>
-      </Authenticated>
+      </div>
     </>
   );
 }

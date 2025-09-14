@@ -1,0 +1,276 @@
+@startuml Lawyer Attestation - Error Handling Flow
+<style>
+' Professional Light Theme Configuration - Pure CSS Style
+!$color_bg = "#ffffff"
+!$color_bg_light = "#f8f9fa"
+!$color_bg_lighter = "#e9ecef"
+!$color_fg = "#212529"
+!$color_fg_muted = "#6c757d"
+!$color_primary = "#0066cc"
+!$color_primary_light = "#4da6ff"
+!$color_success = "#28a745"
+!$color_warning = "#856404"
+!$color_error = "#dc3545"
+!$color_accent = "#6f42c1"
+
+' Root document styling
+document {
+  BackGroundColor: $color_bg;
+  FontColor: $color_fg;
+  FontName: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+  FontSize: 11;
+}
+
+' Activity diagram specific styling
+activity {
+  BackGroundColor: $color_bg_light;
+  LineColor: $color_primary;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+  RoundCorner: 8;
+  Padding: 8;
+}
+
+' Start/End styling
+start {
+  BackGroundColor: $color_success;
+  LineColor: $color_success;
+  FontColor: $color_bg;
+  FontSize: 10;
+}
+
+end {
+  BackGroundColor: $color_error;
+  LineColor: $color_error;
+  FontColor: $color_bg;
+  FontSize: 10;
+}
+
+' Decision diamond styling  
+diamond {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_warning;
+  FontColor: $color_fg;
+  FontSize: 9;
+  LineThickness: 2;
+}
+
+' Arrow styling
+arrow {
+  LineColor: $color_primary;
+  FontColor: $color_fg;
+  FontSize: 9;
+  LineThickness: 2;
+}
+
+' Note styling
+note {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 9;
+  LineThickness: 1;
+  RoundCorner: 6;
+  Padding: 6;
+}
+
+' Partition styling
+partition {
+  BackGroundColor: $color_bg_light;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+}
+</style>
+
+title Lawyer Attestation - Comprehensive Error Handling & Recovery Flow
+
+start
+
+:📝 User submits\nattestation form;
+
+partition "🔍 Frontend Validation Layer" {
+  if (Required fields filled?) then (❌ Missing data)
+    :🚨 Show field validation errors;
+    note right
+      **Field Validation Errors:**
+      • "Legal name is required"
+      • "Bar number is required"  
+      • "Bar number must be 4-10 characters"
+      • "Please enter valid format"
+    end note
+    :🔄 Keep user on form\nwith error highlights;
+    stop
+  else (✅ All fields valid)
+  endif
+
+  if (All checkboxes confirmed?) then (❌ Incomplete)
+    :⚠️ Show attestation errors;
+    note right
+      **Attestation Errors:**
+      • "All professional confirmations required"
+      • "Must confirm good standing"
+      • "Must acknowledge liability"
+    end note
+    :🔄 Return to form\nwith missing items highlighted;
+    stop
+  else (✅ All confirmed)
+  endif
+
+  if (Bar number format valid?) then (❌ Invalid format)
+    :📋 Show bar number format error;
+    note right
+      **Bar Number Validation:**
+      • Must be 4-10 alphanumeric characters
+      • Alberta format (AB12345)
+      • No special characters allowed
+    end note
+    :🔄 Focus on bar number field;
+    stop
+  else (✅ Valid format)
+  endif
+}
+
+partition "🔐 Authentication Layer" {
+  if (User authenticated?) then (❌ Not logged in)
+    :🔒 Save form data to localStorage;
+    :➡️ Redirect to login page;
+    note right
+      **Authentication Recovery:**
+      • Preserve form data during login
+      • Return to form after successful auth
+      • Show "Session expired" message
+      • Auto-restore form fields
+    end note
+    :🔄 After login, restore form\nand show "Please try again";
+    stop
+  else (✅ Authenticated)
+  endif
+
+  if (User role is lawyer?) then (❌ Wrong role)
+    :🚫 Show role restriction error;
+    note right
+      **Authorization Errors:**
+      • "Only lawyers can submit attestations"
+      • "Please contact support if you are a lawyer"
+      • "Check your profile settings"
+    end note
+    stop
+  else (✅ Is lawyer)
+  endif
+}
+
+partition "🧠 Business Logic Layer" {
+  if (Data validation passes?) then (❌ Invalid data)
+    :📝 Show detailed validation errors;
+    note right
+      **Business Rule Violations:**
+      • "All attestation statements must be true"
+      • "Legal name format invalid"
+      • "Bar number fails checksum validation"
+      • "Professional requirements not met"
+    end note
+    :🔄 Return specific field errors;
+    stop
+  else (✅ Data valid)
+  endif
+
+  if (Existing attestation check?) then (🔄 Update mode)
+    :📋 Show "Updating existing attestation";
+  else (🆕 New attestation)
+    :📋 Show "Creating new attestation";
+  endif
+}
+
+partition "🏛️ LSA Verification Layer" {
+  if (LSA API available?) then (❌ Service down)
+    :⚠️ Show LSA service error;
+    note right
+      **LSA Service Recovery:**
+      • "Verification service temporarily unavailable"
+      • "Your attestation will be reviewed manually"
+      • "You will be notified when complete"
+      • Save with manual_review flag
+    end note
+    :📋 Save attestation with\nmanual review flag;
+    :📧 Queue for manual LSA verification;
+    :✅ Show partial success message;
+    end
+  else (✅ LSA available)
+  endif
+
+  if (Bar number found in LSA?) then (❌ Not found)
+    :🏛️ Show LSA verification error;
+    note right
+      **LSA Verification Failures:**
+      • "Bar number not found in LSA directory"
+      • "Please verify your bar number"
+      • "Contact LSA if you believe this is an error"
+      • Provide LSA contact information
+    end note
+    :📞 Show LSA contact info\nfor manual resolution;
+    stop
+  else (✅ Found in LSA)
+  endif
+
+  if (Lawyer in good standing?) then (❌ Disciplinary issues)
+    :⚖️ Show professional standing error;
+    note right
+      **Professional Standing Issues:**
+      • "Professional standing issues detected"
+      • "Please resolve with LSA before attesting"
+      • "Contact LSA Professional Regulation"
+      • Do not save attestation
+    end note
+    :📞 Provide LSA Professional\nRegulation contact;
+    stop
+  else (✅ Good standing)
+  endif
+}
+
+partition "💾 Database Layer" {
+  if (Database save successful?) then (❌ Save failed)
+    :💾 Show database error;
+    note right
+      **Database Recovery:**
+      • "Could not save attestation"
+      • "Please try again in a moment"
+      • Log error details for debugging
+      • Implement exponential backoff retry
+    end note
+    :🔄 Auto-retry with backoff;
+    if (Retry successful?) then (✅ Saved)
+    else (❌ Still failing)
+      :🆘 Show "Contact support" message;
+      :📧 Auto-create support ticket;
+      stop
+    endif
+  else (✅ Saved successfully)
+  endif
+
+  if (Audit log save successful?) then (❌ Audit failed)
+    :📋 Log audit failure\n(critical for compliance);
+    note right
+      **Audit Logging Recovery:**
+      • Continue with attestation (data saved)
+      • Log audit failure separately
+      • Queue audit retry in background
+      • Alert compliance team
+    end note
+    :⚠️ Queue audit log retry;
+    :📧 Alert compliance team;
+  else (✅ Audit logged)
+  endif
+}
+
+:🎉 Success! Show confirmation;
+:📊 Update attestation status;
+:✉️ Send confirmation email;
+
+end
+
+
+
+@enduml

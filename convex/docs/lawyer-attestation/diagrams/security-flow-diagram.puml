@@ -1,0 +1,256 @@
+@startuml Lawyer Attestation - Security & Authentication Flow
+<style>
+' Professional Light Theme Configuration - Pure CSS Style
+!$color_bg = "#ffffff"
+!$color_bg_light = "#f8f9fa"
+!$color_bg_lighter = "#e9ecef"
+!$color_fg = "#212529"
+!$color_fg_muted = "#6c757d"
+!$color_primary = "#0066cc"
+!$color_primary_light = "#4da6ff"
+!$color_success = "#28a745"
+!$color_warning = "#856404"
+!$color_error = "#dc3545"
+!$color_accent = "#6f42c1"
+
+' Root document styling
+document {
+  BackGroundColor: $color_bg;
+  FontColor: $color_fg;
+  FontName: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+  FontSize: 11;
+}
+
+' Activity diagram specific styling
+activity {
+  BackGroundColor: $color_bg_light;
+  LineColor: $color_primary;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+  RoundCorner: 8;
+  Padding: 8;
+}
+
+' Start/End styling
+start {
+  BackGroundColor: $color_success;
+  LineColor: $color_success;
+  FontColor: $color_bg;
+  FontSize: 10;
+}
+
+end {
+  BackGroundColor: $color_error;
+  LineColor: $color_error;
+  FontColor: $color_bg;
+  FontSize: 10;
+}
+
+' Decision diamond styling  
+diamond {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_warning;
+  FontColor: $color_fg;
+  FontSize: 9;
+  LineThickness: 2;
+}
+
+' Arrow styling
+arrow {
+  LineColor: $color_primary;
+  FontColor: $color_fg;
+  FontSize: 9;
+  LineThickness: 2;
+}
+
+' Note styling
+note {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 9;
+  LineThickness: 1;
+  RoundCorner: 6;
+  Padding: 6;
+}
+
+' Partition styling
+partition {
+  BackGroundColor: $color_bg_light;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+}
+</style>
+
+title Lawyer Attestation - Multi-Layer Security & Authentication Flow
+
+start
+
+:👤 User arrives at\nattestation page;
+
+partition "🚪 Gateway Security - Authentication Layer" {
+  if (User has valid session?) then (❌ No session)
+    :🔒 Redirect to login page;
+    note right
+      **Authentication Required**
+      • Valid Convex Auth session
+      • JWT token verification
+      • Session expiry check
+      • Secure cookie validation
+    end note
+    :💾 Save current page URL\nfor post-login redirect;
+    stop
+  else (✅ Authenticated)
+  endif
+
+  if (Session not expired?) then (❌ Expired)
+    :⏰ Show "Session expired" message;
+    :🔒 Redirect to login with\nform data preservation;
+    stop
+  else (✅ Valid session)
+  endif
+}
+
+partition "🎭 Role-Based Authorization Layer" {
+  :🔍 Fetch user profile\nfrom database;
+  
+  if (User exists in database?) then (❌ Not found)
+    :🚫 Show "User not found" error;
+    :📧 Log security incident;
+    stop
+  else (✅ User found)
+  endif
+
+  if (User role is "lawyer"?) then (❌ Wrong role)
+    :🚫 Show access denied message;
+    note right
+      **Role Authorization**
+      • Only lawyers can attest
+      • Admin users have read-only access
+      • End-users blocked completely
+      • Role-based UI rendering
+    end note
+    :📧 Log unauthorized access attempt;
+    stop
+  else (✅ Is lawyer)
+  endif
+}
+
+partition "🏠 Row-Level Security Layer" {
+  :📋 Load attestation form;
+  
+  if (Loading existing attestation?) then (🔄 Yes)
+    if (Attestation belongs to current user?) then (❌ Not owner)
+      :🚫 Block access to other user data;
+      note right
+        **Data Ownership Protection**
+        • Users can only see own attestations
+        • Admin override for compliance review
+        • Audit log access attempts
+        • Zero data leakage between users
+      end note
+      :📧 Log data access violation;
+      stop
+    else (✅ Owner verified)
+    endif
+  else (🆕 New attestation)
+  endif
+}
+
+:✅ User granted access to\nattestation form;
+
+partition "📝 Form Submission Security" {
+  :👩‍⚖️ User submits attestation;
+  
+  :🔐 Re-verify authentication\non submission;
+  if (Still authenticated?) then (❌ Session lost)
+    :🔒 Require re-authentication;
+    :💾 Preserve form data;
+    stop
+  else (✅ Still valid)
+  endif
+
+  :🎭 Re-check lawyer role\non submission;
+  if (Still has lawyer role?) then (❌ Role changed)
+    :🚫 Reject submission;
+    :📧 Log role change during session;
+    stop
+  else (✅ Still lawyer)
+  endif
+}
+
+partition "📊 Input Validation Security" {
+  :🔍 Validate input against\nattestation schema;
+  
+  if (Schema validation passes?) then (❌ Invalid data)
+    :⚠️ Return validation errors;
+    note right
+      **Input Security Measures**
+      • Type-safe validation schemas
+      • XSS prevention & sanitization
+      • SQL injection protection
+      • Length & format constraints
+      • Business rule enforcement
+    end note
+    stop
+  else (✅ Valid input)
+  endif
+
+  :🧠 Business logic validation;
+  if (Business rules satisfied?) then (❌ Rule violation)
+    :📝 Return business rule errors;
+    stop
+  else (✅ Rules satisfied)
+  endif
+}
+
+partition "🏛️ External Verification Security" {
+  :📞 Call LSA verification API;
+  
+  if (LSA API responds?) then (❌ Service down)
+    :⚠️ Mark for manual review;
+    note right
+      **External Security Validation**
+      • Professional status verification
+      • Bar number authenticity check
+      • Disciplinary action screening
+      • Good standing confirmation
+      • Fallback to manual review
+    end note
+  else (✅ LSA verified)
+  endif
+}
+
+partition "💾 Data Storage Security" {
+  :📝 Store attestation in database;
+  
+  :🔐 Apply row-level security rules;
+  note left
+    **Storage Security Features**
+    • Encrypted data at rest
+    • User ID association enforced
+    • Atomic database transactions
+    • No direct SQL access
+    • Convex security built-in
+  end note
+  
+  :📋 Log audit event with metadata;
+  note left
+    **Audit Trail Security**
+    • IP address captured
+    • Timestamp precision
+    • User agent logging
+    • Action type recorded
+    • Immutable audit log
+    • Compliance requirement met
+  end note
+}
+
+:🎉 Attestation successfully\nstored with full security;
+
+end
+
+@enduml

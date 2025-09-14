@@ -1,0 +1,286 @@
+@startuml Lawyer Attestation - Complete Flow
+<style>
+' Professional Light Theme Configuration - Pure CSS Style
+!$color_bg = "#ffffff"
+!$color_bg_light = "#f8f9fa"
+!$color_bg_lighter = "#e9ecef"
+!$color_fg = "#212529"
+!$color_fg_muted = "#6c757d"
+!$color_primary = "#0066cc"
+!$color_primary_light = "#4da6ff"
+!$color_success = "#28a745"
+!$color_warning = "#856404"
+!$color_error = "#dc3545"
+!$color_accent = "#6f42c1"
+
+' Root document styling
+document {
+  BackGroundColor: $color_bg;
+  FontColor: $color_fg;
+  FontName: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+  FontSize: 11;
+}
+
+' Sequence diagram specific styling
+participant {
+  BackGroundColor: $color_bg_light;
+  LineColor: $color_primary;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+  RoundCorner: 8;
+  Padding: 8;
+}
+
+actor {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+}
+
+' Arrow styling
+arrow {
+  LineColor: $color_success;
+  FontColor: $color_warning;
+  FontSize: 12;
+  LineThickness: 2;
+}
+
+' Activation box styling
+lifeLine {
+  LineColor: $color_primary;
+  LineThickness: 2;
+}
+
+' Note styling
+note {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 9;
+  LineThickness: 1;
+  RoundCorner: 6;
+  Padding: 6;
+}
+
+' Group/Alt styling
+group {
+  BackGroundColor: $color_bg_light;
+  LineColor: $color_primary;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+}
+</style>
+
+title Lawyer Attestation - Complete User Flow
+
+actor "⚖️ Lawyer" as Lawyer
+participant "💻 Frontend\n(AttestationForm)" as Frontend
+participant "🔧 Convex API\n(attestations.js)" as API
+participant "🏗️ Model Layer\n(model/attestation.js)" as Model
+participant "🏛️ Law Society\nAlberta API" as LSA
+participant "🗄️ Database" as DB
+
+note over Lawyer, DB
+  **Lawyer Attestation Architecture**
+  
+  Following Convex best practices with:
+  • **API Layer**: Secure authentication & authorization
+  • **Model Layer**: Business logic & LSA integration
+  • **Row-Level Security**: User owns their attestation
+  • **Audit Trail**: Complete compliance logging
+end note
+
+== Phase 1: Lawyer Initiates Attestation ==
+
+Lawyer -> Frontend : 📝 Fill out attestation form
+activate Frontend
+
+note right of Frontend
+  **Form Data Collected**
+  • Legal name & bar number
+  • Professional standing confirmations
+  • All checkboxes must be true
+  • Digital signature captured
+  • IP address for audit trail
+end note
+
+Frontend -> Frontend : 🔍 Client-side validation\n(required fields, bar format)
+
+alt Form validation passes
+  Frontend -> Frontend : ✅ Show "Submitting..." state
+else Form validation fails
+  Frontend -> Lawyer : ❌ Show validation errors
+  note right of Frontend
+    **Common Validation Errors:**
+    • "Legal name is required"
+    • "Bar number must be 4-10 characters"
+    • "All confirmations must be checked"
+  end note
+  Lawyer <-- Frontend : Error displayed
+  deactivate Frontend
+end
+
+== Phase 2: Submit Attestation ==
+
+Frontend -> API : ✍️ submitAttestation(formData)
+activate API
+
+note right of API
+  **API Security Checks**
+  • User must be authenticated
+  • User role must be "lawyer"
+  • Input validation against schema
+  • IP address extraction for audit
+end note
+
+API -> API : 🔐 requireUser()\nCheck authentication
+alt User authenticated
+  API -> API : 🎭 requireLawyer()\nCheck role = "lawyer"
+  alt User is lawyer
+    API -> API : ✅ Validate attestation data
+  else User not lawyer
+    API --> Frontend : ❌ "Only lawyers can attest"
+    deactivate API
+    Frontend -> Lawyer : 🚫 Show role error
+    deactivate Frontend
+  end
+else User not authenticated  
+  API --> Frontend : ❌ "Not authenticated"
+  deactivate API
+  Frontend -> Lawyer : 🔒 Redirect to login
+  deactivate Frontend
+end
+
+== Phase 3: Business Logic Processing ==
+
+API -> Model : 🧠 validateAttestationRequirements(data)
+activate Model
+
+Model -> Model : 🔍 Validate required fields\n& checkbox confirmations
+alt Data validation passes
+  Model -> Model : ✅ Check bar number format
+else Data validation fails
+  Model --> API : ❌ Validation error details
+  API --> Frontend : ❌ "Please check all fields"
+  deactivate Model
+  deactivate API
+  Frontend -> Lawyer : 📝 Show field errors
+  deactivate Frontend
+end
+
+== Phase 4: LSA Verification ==
+
+Model -> LSA : 🏛️ verifyLSAStanding(barNumber)
+activate LSA
+
+note right of LSA
+  **LSA Directory Check**
+  • Validate bar number exists
+  • Check lawyer is in good standing
+  • Verify no disciplinary actions
+  • Currently stubbed (returns true)
+end note
+
+LSA -> LSA : 🔍 Check lawyer directory
+alt LSA verification successful
+  LSA --> Model : ✅ { verified: true, status: "good" }
+  deactivate LSA
+else LSA verification fails
+  LSA --> Model : ❌ { verified: false, error: "Not found" }
+  deactivate LSA
+  Model --> API : ⚠️ LSA verification failed
+  API --> Frontend : ❌ "Could not verify with LSA"
+  deactivate Model
+  deactivate API
+  Frontend -> Lawyer : 🏛️ Show LSA error
+  deactivate Frontend
+end
+
+== Phase 5: Database Storage ==
+
+Model -> Model : 📋 Check for existing attestation
+Model -> DB : 🔍 getCurrentAttestation(userId)
+activate DB
+DB --> Model : 📄 Existing attestation or null
+Model -> Model : 🔄 Determine if update or new
+
+Model -> DB : 💾 storeAttestation(userId, data)
+Model -> DB : 📝 Insert/update attestations table
+DB --> Model : ✅ Attestation saved
+deactivate DB
+
+== Phase 6: Audit Logging ==
+
+Model -> DB : 📋 logAttestationEvent(userId, data)
+activate DB
+
+note right of Model
+  **Audit Trail Captured**
+  • Event: "attestation_submitted"
+  • Timestamp & IP address
+  • Bar number & legal name
+  • All attestation confirmations
+  • LSA verification result
+end note
+
+DB -> DB : 📝 Insert into consentAuditLog
+DB --> Model : ✅ Audit log created
+deactivate DB
+
+Model --> API : ✅ { success: true, isUpdate: false }
+deactivate Model
+API --> Frontend : 🎉 Success response
+deactivate API
+
+== Phase 7: Success Display ==
+
+Frontend -> Frontend : 🎊 Show success state
+Frontend -> Frontend : 🔄 Update attestation status
+
+Frontend -> API : 📊 checkMyAttestationStatus()
+activate API
+API -> Model : 📈 hasValidAttestation(userId)
+activate Model
+Model -> DB : 🔍 Query attestations table
+activate DB
+DB --> Model : 📋 Attestation data
+deactivate DB
+Model --> API : ✅ { isValid: true, lsaVerified: true }
+deactivate Model
+API --> Frontend : 📊 Status data
+deactivate API
+
+Frontend -> Lawyer : ✨ Display success confirmation
+deactivate Frontend
+
+note over Lawyer, DB
+  **✅ Attestation Complete Successfully!**
+  
+  **What Happened:**
+  1. ✅ Form data validated on client & server
+  2. ✅ User authentication & lawyer role verified
+  3. ✅ Professional standing confirmations checked
+  4. ✅ LSA directory verification completed
+  5. ✅ Attestation saved with audit trail
+  6. ✅ Success confirmation displayed
+  
+  **Security Measures Applied:**
+  • 🔐 Authentication required for all operations
+  • 🎭 Role-based authorization enforced
+  • 👤 User can only attest for themselves
+  • 📋 Complete audit trail maintained
+  • 🏛️ External LSA verification performed
+  
+  **Compliance Features:**
+  • 📝 All actions logged with timestamps
+  • 🌐 IP addresses captured for audit
+  • 📊 Attestation status tracking
+  • 🔄 Update notifications for changes
+  • ⚖️ Legal liability acknowledgments
+end note
+
+@enduml

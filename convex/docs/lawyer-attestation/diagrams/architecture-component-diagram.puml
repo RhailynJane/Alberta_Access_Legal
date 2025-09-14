@@ -1,0 +1,263 @@
+@startuml Lawyer Attestation - System Architecture
+<style>
+' Professional Light Theme Configuration - Pure CSS Style
+!$color_bg = "#ffffff"
+!$color_bg_light = "#f8f9fa"
+!$color_bg_lighter = "#e9ecef"
+!$color_fg = "#212529"
+!$color_fg_muted = "#6c757d"
+!$color_primary = "#0066cc"
+!$color_primary_light = "#4da6ff"
+!$color_success = "#28a745"
+!$color_warning = "#856404"
+!$color_error = "#dc3545"
+!$color_accent = "#6f42c1"
+
+' Root document styling
+document {
+  BackGroundColor: $color_bg;
+  FontColor: $color_fg;
+  FontName: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+  FontSize: 11;
+}
+
+' Component styling
+component {
+  BackGroundColor: $color_bg_light;
+  LineColor: $color_primary;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+  RoundCorner: 8;
+  Padding: 8;
+}
+
+' Package styling
+package {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 11;
+  LineThickness: 2;
+  RoundCorner: 8;
+}
+
+' Database styling
+database {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_success;
+  FontColor: $color_fg;
+  FontSize: 10;
+  LineThickness: 2;
+}
+
+' Arrow styling
+arrow {
+  LineColor: $color_success;
+  FontColor: $color_warning;
+  FontSize: 9;
+  LineThickness: 2;
+}
+
+' Note styling
+note {
+  BackGroundColor: $color_bg_lighter;
+  LineColor: $color_accent;
+  FontColor: $color_fg;
+  FontSize: 9;
+  LineThickness: 1;
+  RoundCorner: 6;
+  Padding: 6;
+}
+</style>
+
+title Lawyer Attestation System - Architecture & Component Relationships
+
+package "Frontend Layer" as Frontend {
+  [AttestationForm\nComponent] as AttestationComp
+  [Form Validation\nLogic] as FormValidation
+  [Status Badge\nDisplay] as StatusBadge
+  [Error Handling\nUI] as ErrorHandler
+  [Loading States\nManager] as LoadingStates
+}
+
+package "Convex API Layer" as APILayer {
+  [submitAttestation\nMutation] as SubmitAttestation
+  [getMyAttestation\nQuery] as GetAttestation
+  [checkMyAttestationStatus\nQuery] as CheckStatus
+  [getMyAttestationAuditLog\nQuery] as GetAuditLog
+  [getAllAttestations\nQuery (Admin)] as AdminGetAll
+}
+
+package "Business Logic Layer" as ModelLayer {
+  [storeAttestation\nFunction] as StoreFunction
+  [validateAttestationRequirements\nFunction] as ValidateFunction
+  [logAttestationEvent\nFunction] as LogFunction
+  [getCurrentAttestation\nFunction] as GetCurrentFunction
+  [hasValidAttestation\nFunction] as HasValidFunction
+  [verifyLSAStanding\nFunction] as LSAVerifyFunction
+}
+
+package "Infrastructure Layer" as Infrastructure {
+  database "Convex Database" as Database {
+    [attestations\nTable] as AttestationsTable
+    [consentAuditLog\nTable] as AuditTable
+    [users\nTable] as UsersTable
+  }
+  
+  database "External APIs" as ExternalAPIs {
+    [Law Society Alberta\nDirectory API] as LSADirectory
+    [Professional Standing\nVerification] as LSAStanding
+  }
+}
+
+package "Security & Validation" as Security {
+  [Authentication\nMiddleware] as AuthMiddleware
+  [Role-Based\nAuthorization] as RoleAuth
+  [Row-Level\nSecurity] as RLSSecurity
+  [Input Validation\nSchemas] as InputValidation
+  [Audit Trail\nCompliance] as AuditCompliance
+}
+
+package "Schema & Types" as SchemaLayer {
+  [attestationFields\nValidator] as AttestationSchema
+  [Type Safety\nInference] as TypeSafety
+  [Database Indexes\nOptimization] as DatabaseIndexes
+}
+
+' Frontend Component Relationships
+AttestationComp --> FormValidation : validates input
+AttestationComp --> StatusBadge : shows status
+AttestationComp --> ErrorHandler : handles errors
+AttestationComp --> LoadingStates : manages UI states
+FormValidation --> AttestationComp : validation results
+
+' API Calls from Frontend
+AttestationComp --> SubmitAttestation : submit attestation
+AttestationComp --> GetAttestation : get existing data
+AttestationComp --> CheckStatus : check validity
+StatusBadge --> CheckStatus : real-time status
+ErrorHandler --> GetAuditLog : error investigation
+
+' API to Model Layer Calls
+SubmitAttestation --> StoreFunction : business logic
+SubmitAttestation --> ValidateFunction : data validation
+SubmitAttestation --> LogFunction : audit logging
+GetAttestation --> GetCurrentFunction : data retrieval
+CheckStatus --> HasValidFunction : status validation
+AdminGetAll --> GetCurrentFunction : admin queries
+
+' Model Layer to Infrastructure
+StoreFunction --> AttestationsTable : save attestation
+ValidateFunction --> InputValidation : rule checking
+LogFunction --> AuditTable : compliance logging
+GetCurrentFunction --> AttestationsTable : data queries
+LSAVerifyFunction --> LSADirectory : external verification
+LSAVerifyFunction --> LSAStanding : standing check
+
+' Security Integration Points
+SubmitAttestation --> AuthMiddleware : verify auth
+SubmitAttestation --> RoleAuth : check lawyer role
+GetAttestation --> RLSSecurity : user ownership
+AdminGetAll --> RoleAuth : admin privileges
+LogFunction --> AuditCompliance : compliance rules
+
+' Schema Integration
+AttestationSchema --> SubmitAttestation : argument validation
+AttestationSchema --> AttestationsTable : table definition
+TypeSafety --> AttestationComp : frontend types
+DatabaseIndexes --> AttestationsTable : query optimization
+
+' External Dependencies
+LSAVerifyFunction --> ExternalAPIs : verification calls
+AuditCompliance --> AuditTable : regulatory logging
+
+note top of Frontend
+  **Frontend Responsibilities:**
+  • ⚖️ Professional attestation form UI
+  • ✅ Real-time client-side validation
+  • 📊 Status badges & verification display
+  • 🚨 Comprehensive error handling
+  • 📱 Responsive design & accessibility
+  • 🔄 Loading states & user feedback
+end note
+
+note right of APILayer
+  **API Layer Design Principles:**
+  • 🔒 Authentication required on all mutations
+  • 🎭 Role-based authorization (lawyer/admin)
+  • 📝 Type-safe parameter validation
+  • 🏠 Row-level security enforcement
+  • 📋 Comprehensive audit logging
+  • ⚡ Optimized query performance
+end note
+
+note bottom of ModelLayer
+  **Business Logic Features:**
+  • 🏛️ LSA directory integration (stubbed)
+  • ✅ Professional standing verification
+  • 📊 Comprehensive validation rules
+  • 📋 Audit event logging
+  • 🔄 Update vs create logic
+  • 🛡️ Row-level security helpers
+  • 🧪 Isolated testing capabilities
+end note
+
+note left of Infrastructure
+  **Infrastructure Capabilities:**
+  • 📊 Indexed database queries
+  • 🔍 Full-text search on attestations
+  • 📈 Real-time data synchronization
+  • 🔐 Built-in authentication system
+  • 📋 Compliance audit trail
+  • 🌐 External API integration
+  • ⚡ Automatic caching & optimization
+end note
+
+note right of Security
+  **Security Implementation:**
+  • 🔐 Multi-layer authentication
+  • 🎭 Granular role permissions
+  • 🏠 Data ownership enforcement
+  • 📝 Input sanitization & validation
+  • 📋 Complete audit logging
+  • 🛡️ SQL injection protection
+  • 🔒 Secure API endpoints
+end note
+
+' Data Flow Annotations
+note as DataFlow
+  **Complete Data Flow:**
+  
+  **Attestation Submission:**
+  1. 📝 Lawyer fills form (Frontend)
+  2. ✅ Client validation (Frontend)
+  3. 🔒 Auth & role check (API)
+  4. 🧠 Business validation (Model)
+  5. 🏛️ LSA verification (External)
+  6. 💾 Database storage (Infrastructure)
+  7. 📋 Audit logging (Compliance)
+  8. 🎉 Success response (Frontend)
+  
+  **Security Checkpoints:**
+  • 🔐 Authentication at API layer
+  • 🎭 Role authorization per endpoint
+  • 🏠 User ownership validation
+  • 📝 Schema-based input validation
+  • 🏛️ External credential verification
+  • 📋 Complete audit trail logging
+  
+  **Performance Optimizations:**
+  • 📊 Database indexes on common queries
+  • ⚡ Real-time UI updates via Convex
+  • 🚀 Type-safe API with auto-completion
+  • 🔄 Optimistic UI updates
+  • 📱 Responsive form with progressive enhancement
+end note
+
+' Architecture Layers Visual Separation
+AttestationComp -[hidden]down- SubmitAttestation
+SubmitAttestation -[hidden]down- StoreFunction  
+StoreFunction -[hidden]down- AttestationsTable
+
+@enduml
