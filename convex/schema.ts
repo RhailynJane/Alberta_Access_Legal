@@ -2,6 +2,22 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
 
+// Attestation validators for lawyer verification
+export const attestationFields = {
+  legalName: v.string(),
+  barNumber: v.string(),
+  isLicensed: v.boolean(),
+  isInGoodStanding: v.boolean(),
+  noDisciplinaryActions: v.boolean(),
+  profileAccurate: v.boolean(),
+  willUpdateOnChange: v.boolean(),
+  understandsLiability: v.boolean(),
+  attestationText: v.optional(v.string()),
+  attestationVersion: v.optional(v.string()),
+  ipAddress: v.optional(v.string()),
+  digitalSignature: v.optional(v.string()),
+};
+
 export default defineSchema({
   ...authTables,
 
@@ -105,7 +121,7 @@ export default defineSchema({
     .index("by_userType", ["userType"])
     .index("by_deletion", ["lifecycle.deletionRequested"]),
 
-  // Consent audit log for compliance tracking
+  // Consent audit log for compliance tracking (includes attestation events)
   consentAuditLog: defineTable({
     userId: v.id("users"),
     event: v.union(
@@ -116,7 +132,9 @@ export default defineSchema({
       v.literal("marketing_opted_in"),
       v.literal("marketing_opted_out"),
       v.literal("data_export_requested"),
-      v.literal("deletion_requested")
+      v.literal("deletion_requested"),
+      v.literal("attestation_submitted"),
+      v.literal("attestation_updated")
     ),
     version: v.string(),
     timestamp: v.number(),
@@ -126,6 +144,16 @@ export default defineSchema({
   })
     .index("by_user", ["userId", "timestamp"])
     .index("by_event", ["event", "timestamp"]),
+
+  // Lawyer attestations for professional verification
+  attestations: defineTable({
+    userId: v.id("users"),
+    ...attestationFields,
+    lsaVerified: v.optional(v.boolean()),
+    attestedAt: v.number(),
+  }).index("by_user", ["userId"])
+   .index("by_barNumber", ["barNumber"])
+   .index("by_lsaVerified", ["lsaVerified"]),
 
   // OAuth tokens with proper user reference
   oauthTokens: defineTable({
